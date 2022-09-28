@@ -2,6 +2,7 @@ import re
 import sentencepiece as spm
 import os
 import numpy as np
+import pandas as pd
 import logging
 
 RAW_DATA_DIR="../input/raw_data"
@@ -25,7 +26,7 @@ def remove_special_characters(sentence, lower=True):
     p = re.compile('\<[^)]*\>')
     sentence = p.sub(' ', sentence) # 패턴 객체로 sentence 내의 <> 안의 문자열을 공백문자로 치환한다.
 
-    p = re.compile('\[[^\]*\]') 
+    p = re.compile('\[[^\]]*\]') 
     sentence = p.sub(' ', sentence) # 패턴 객체로 sentence 내의 [] 안의 문자열을 공백문자로 치환한다.
 
     # 특수기호를 나열한 패턴 문자열을 컴파일하여 패턴 객체를 얻는다.
@@ -43,20 +44,24 @@ def train_spm(txt_path,spm_path,vocab_size=32000,input_sentence_size=1000000):
     #input_sentence_size 개수만큼만 학습데이터로 사용된다.
 
     spm.SentencePieceTrainer.Train(
-        f'--input={txt_path} --model_type=bpe'
-        f'--model_prefix={spm_path} --vocab_size={vocab_size}'
-        f'--input_sentence_size={input_sentence_size}'
+        f'--input={txt_path} --model_type=bpe '
+        f'--model_prefix={spm_path} --vocab_size={vocab_size} '
+        f'--input_sentence_size={input_sentence_size} '
         f'--shuffle_input_sentence=true'
     )
-
-#path_list 파일에서 col 변수에 해당하는 컬럼값들을 가져온다.
-def get_column_data(path_list,div,col):
-    #path_list가 문자열인 경우 리스트형태로 바꾼다.
-    if isinstance(path_list,str):
-        path_list=[path_list]
     
 def get_dataframe():
-    pass
+    train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
+    
+    text=[]
+    for title,lyric in zip(train_df['title'],train_df['lyric']):
+        if lyric != None:
+            text.append(title+'\n'+lyric)
+        else:
+            text.append(title)
+    
+    train_df['text']=text
+    return train_df
 
 def preprocess():
 

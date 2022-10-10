@@ -35,12 +35,27 @@ class TagClassifier(nn.Module):
         # 텍스트 인코더로 버트모델 사용
         self.text_encoder = BertModel(self.bert_cfg)
 
-        # 음원 인코더로 CNN 사용 - 미구현
+        # 음원 인코더로 CNN 사용
         self.sound_encoder = nn.Sequential(
-            nn.Conv2d,
-            nn.MaxPool2d,
-            nn.Flatten,
-            nn.Linear
+            nn.Conv2d(in_channels=3,out_channels=32,kernel_size=3,stride=2),
+            nn.BatchNorm2d(32),
+            
+            nn.Conv2d(in_channels=32,out_channels=32,kernel_size=3,stride=2),
+            nn.BatchNorm2d(32),
+            nn.MaxPool2d(2),
+            nn.Dropout2d(0.5),
+            
+            nn.Conv2d(in_channels=32,out_channels=64,kernel_size=3,stride=2),
+            nn.BatchNorm2d(64),
+            
+            nn.Conv2d(in_channels=64,out_channels=64,kernel_size=3,stride=2),
+            nn.BatchNorm2d(64),
+            nn.Dropout2d(0.5),
+            
+            nn.Flatten(),
+            nn.Linear(in_features=64*19*14,out_features=1024),
+            nn.ReLU(),
+            nn.Linear(1024,cfg.hidden_size)
         )
 
         # 분류기(Classifier) 생성기

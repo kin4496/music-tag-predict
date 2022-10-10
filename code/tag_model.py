@@ -53,7 +53,7 @@ class TagClassifier(nn.Module):
             nn.Dropout2d(0.5),
             
             nn.Flatten(),
-            nn.Linear(in_features=64*19*14,out_features=1024),
+            nn.Linear(in_features=64*5*5,out_features=1024),
             nn.ReLU(),
             nn.Linear(1024,cfg.hidden_size)
         )

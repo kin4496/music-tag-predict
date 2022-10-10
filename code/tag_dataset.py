@@ -1,6 +1,13 @@
 import torch # 파이토치 패키지 임포트
 from torch.utils.data import Dataset # Dataset 클래스 임포트
+from torchvision.transforms import ToTensor
+from PIL import Image
+import numpy as np
 import re
+import os
+import re
+
+MEL_DATA_DIR='../input/processed/music/mel'
 
 class TagDataset(Dataset):
     """
@@ -16,7 +23,9 @@ class TagDataset(Dataset):
         tokens_max_len : tokens의 최대 길이. 가사+제목의 tokens가 이 이상이면 버림
         type_vocab_size : 타입 사전의 크기
         """
-
+        self.titles=df_data['title']
+        self.artists=df_data['artist']
+        
         self.tokens = df_data['text'].values
         self.mel_spec_path = mel_spec_path
         self.tokens_max_len=tokens_max_len
@@ -60,8 +69,6 @@ class TagDataset(Dataset):
         token_mask += token_pad
         token_types += token_pad 
 
-        #음원 멜-스펙트럼 가져오기 - 미구현
-
         # 넘파이(numpy)나 파이썬 자료형을 파이토치의 자료형으로 변환
         token_ids = torch.LongTensor(token_ids)
         token_mask = torch.LongTensor(token_mask)
@@ -70,11 +77,18 @@ class TagDataset(Dataset):
         # token_types의 타입 인덱스의 숫자,크기가 type_vocab_size 보다 작도록 바꿈
         token_types[token_types >=self.type_vocab_size] = self.type_vocab_size-1
 
-        #음원의 멜-스펙트럼 이미지 피처 - 미구현
-        sound_feat=None
+        #음원의 멜-스펙트럼 이미지 가져오기
+        title=self.titles[idx]
+        artist=self.artists[idx]
+        fname=getMelImageFname(title,artist)
+        sound_feat=getMelImage(os.path.join(MEL_DATA_DIR,fname))
+        
+        #이미지가 없다면 0으로 채워진 텐서 반환
+        if sound_feat==None:
+            sound_feat=torch.zeros((1,3,200,200))
 
         # 주제/감정,분위기/상황 라벨 준비
-        label = self.labels[idx]
+        label = self.labels.iloc[idx].to_list()
         label = torch.LongTensor(label)
 
         # 제목+가사 텍스트 데이터, 음원 입력, 라벨을 반환한다.
@@ -85,3 +99,33 @@ class TagDataset(Dataset):
           tokens의 개수를 반환한다. 즉, 상품명 문장의 개수를 반환한다.
         """
         return len(self.tokens)
+
+def getMelImageFname(title,artist):
+    
+    if artist==None or len(artist)==0:
+        artist=''
+    else:
+        artist=artist[0]
+           
+    p=re.compile('[\|:?><*]')
+    title=p.sub('_',title)
+    artist=p.sub('_',artist)
+    
+    if artist=='':
+        text=title
+    else:
+        text=f"{artist} {title}"
+    
+    text+='.jpg'
+    return text
+
+def getMelImage(path,size=(200,200)):
+    
+    if os.path.exists(path):
+        img=Image.open(path)
+        img=img.resize(size)
+        img.convert("RGB")
+        img = ToTensor(img)
+    else:
+        img=None
+    return img

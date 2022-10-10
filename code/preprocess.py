@@ -99,6 +99,18 @@ def preprocess():
 
     # text 칼럼의 제목 + 가사를 분절한 결과를 tokens 칼럼에 저장한다.
     train_df['tokens'] = train_df['text'].map(lambda x: " ".join(sp.EncodeAsPieces(x)) )
-
+    
+    #topic, mood, situation 컬럼의 값을 0,1,2,3... 같은 숫자로 바꾼다.
+    train_df['topic']=train_df['topic'].astype('category').cat.codes
+    train_df['mood']=train_df['mood'].astype('category').cat.codes
+    train_df['situation']=train_df['situation'].astype('category').cat.codes
+    
+    #필요한 컬럼만 남기고 삭제
+    columns = ['tokens','title',  'artist', 'topic', 'mood', 'situation']
+    train_df=train_df[columns]
+    
+    #json 형태로 저장
+    train_df.to_json(os.path.join(PROCESSED_DATA_DIR,'train.json'))
+    
 if __name__ == '__main__':
     preprocess()

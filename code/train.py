@@ -15,6 +15,9 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 import warnings
 warnings.filterwarnings(action='ignore')
 
+# 전처리 전 데이터가 저장된 디렉토리
+RAW_DATA_DIR="../input/raw_data"
+
 # 전처리된 데이터가 저장된 디렉터리
 DB_PATH=f'../input/processed'
 
@@ -27,7 +30,7 @@ MODEL_PATH=f'../model'
 # 미리 정의된 설정 값
 class CFG:
     learning_rate=3.0e-4 # 러닝 레이트
-    batch_size=1024 # 배치 사이즈
+    batch_size=256 # 배치 사이즈
     num_workers=4 # 워커의 개수
     print_freq=100 # 결과 출력 빈도
     start_epoch=0 # 시작 에폭
@@ -40,15 +43,14 @@ class CFG:
     intermediate_size=256 # TRANSFORMER셀의 intermediate 크기
     nlayers=2 # BERT의 층수
     nheads=8 # BERT의 head 개수
-    seq_len=64 # 토큰의 최대 길이
-    n_t_cls = 57 + 1 # 노래주제 개수 - 아직 정확히 안 정해짐
-    n_m_cls = 552 + 1 # 감정,분위기 개수 - 아직 정확히 안 정해짐
-    n_e_cls = 3190 + 1 # 상황 개수 - 아직 정확히 안 정해짐
+    seq_len=256 # 토큰의 최대 길이
+    n_t_cls = 5 # 노래주제 개수 - 아직 정확히 안 정해짐
+    n_m_cls = 6 # 감정,분위기 개수 - 아직 정확히 안 정해짐
+    n_s_cls = 3 # 상황 개수 - 아직 정확히 안 정해짐
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
-    img_feat_size = 2048 # 이미지 피처 벡터의 크기 - 아직 정확히 안 정해짐
-    type_vocab_size = 30 # 타입의 유니크 인덱스 개수 - 아직 정확히 안 정해짐
+    type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
     train_path = os.path.join(DB_PATH,'train.json')
-    mel_spec_path = os.path.join(DB_PATH,'train_mel_spec.') # 아직 안함
+    mel_spec_path = os.path.join(DB_PATH,'music/mel') # 아직 안함
 
 def main():
     # 명령행에서 받을 키워드 인자를 설정한다.
@@ -82,6 +84,13 @@ def main():
     CFG.nheads =  args.nheads
     CFG.hidden_size =  args.hidden_size    
     print(CFG.__dict__)
+    
+    # 전처리되기 전 데이터 읽어와 분류해야할 수를 가져온다.
+    raw_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
+    CFG.n_t_cls=len(raw_df['topic'].astype('category').cat.categories)
+    CFG.n_m_cls=len(raw_df['mood'].astype('category').cat.categories)
+    CFG.n_s_cls=len(raw_df['situation'].astype('category').cat.categories)
+    
 
     # 랜덤 시드를 설정하여 매 코드를 실행할 때마다 동일한 결과를 얻게 합니다.
     os.environ['PYTHONHASHSEED'] = str(CFG.seed)

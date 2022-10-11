@@ -1,3 +1,4 @@
+from pkgutil import get_data
 import re
 import sentencepiece as spm
 import os
@@ -8,6 +9,12 @@ import logging
 RAW_DATA_DIR="../input/raw_data"
 PROCESSED_DATA_DIR="../input/processed"
 VOCAB_DIR = os.path.join(PROCESSED_DATA_DIR,'vocab')
+
+# 학습에 사용될 파일 
+TRAIN_FILE = 'train.json'
+
+# 테스트에 사용될 파일 
+DEV_FILE = 'data.json'
 
 def get_logger():
     FORMAT = '[%(levelname)s]%(asctime)s:%(name)s:%(message)s'
@@ -50,18 +57,18 @@ def train_spm(txt_path,spm_path,vocab_size=32000,input_sentence_size=1000000):
         f'--shuffle_input_sentence=true'
     )
     
-def get_dataframe():
-    train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
+def get_dataframe(fname):
+    df=pd.read_json(os.path.join(RAW_DATA_DIR,fname))
     
     text=[]
-    for title,lyric in zip(train_df['title'],train_df['lyric']):
+    for title,lyric in zip(df['title'],df['lyric']):
         if lyric != None:
             text.append(title+'\n'+lyric)
         else:
             text.append(title)
     
-    train_df['text']=text
-    return train_df
+    df['text']=text
+    return df
 
 def preprocess():
 
@@ -69,11 +76,23 @@ def preprocess():
     os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
     os.makedirs(VOCAB_DIR, exist_ok=True)
 
-    train_df=get_dataframe()
+    #데이터 프레임 불러오기
+    train_df=get_dataframe(TRAIN_FILE)
+    dev_df=get_dataframe(DEV_FILE)
+    
+    #dev_df에 topic,mood,situation column 추가하기
+    labels=['topic','mood','situation']
+    size=dev_df['title'].count()
+    tempArr=[-1 for i in range(0,size)]
+    for label in labels:
+        if label not in dev_df.columns:
+            dev_df[label]=tempArr
+    
 
     # text 칼럼에 특수기호를 제거하는 함수를 적용한 결과를 반환한다.
     train_df['text'] = train_df['text'].map(remove_special_characters)
-
+    dev_df['text'] = dev_df['text'].map(remove_special_characters)
+    
     # 제목+가사를 text.txt 파일명으로 저장한다.
     with open(os.path.join(VOCAB_DIR, 'text.txt'), 'w', encoding='utf-8') as f:
         f.write(train_df['text'].str.cat(sep='\n'))
@@ -99,6 +118,7 @@ def preprocess():
 
     # text 칼럼의 제목 + 가사를 분절한 결과를 tokens 칼럼에 저장한다.
     train_df['tokens'] = train_df['text'].map(lambda x: " ".join(sp.EncodeAsPieces(x)) )
+    dev_df['tokens'] = dev_df['text'].map(lambda x: " ".join(sp.EncodeAsPieces(x)) )
     
     #topic, mood, situation 컬럼의 값을 0,1,2,3... 같은 숫자로 바꾼다.
     train_df['topic']=train_df['topic'].astype('category').cat.codes
@@ -111,6 +131,7 @@ def preprocess():
     
     #json 형태로 저장
     train_df.to_json(os.path.join(PROCESSED_DATA_DIR,'train.json'))
+    dev_df.to_json(os.path.join(PROCESSED_DATA_DIR,'data.json'))
     
 if __name__ == '__main__':
     preprocess()

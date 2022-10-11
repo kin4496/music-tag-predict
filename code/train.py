@@ -50,7 +50,7 @@ class CFG:
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
     type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
     train_path = os.path.join(DB_PATH,'train.json')
-    mel_spec_path = os.path.join(DB_PATH,'music/mel') # 아직 안함
+    mel_spec_path = os.path.join(DB_PATH,'music/mel')
 
 def main():
     # 명령행에서 받을 키워드 인자를 설정한다.
@@ -209,12 +209,11 @@ def main():
         def get_log_row_df(epoch,lr,train_res,valid_res):
             log_row={
                 'EPOCH':epoch,'LR':lr,
-                'TRAIN_LOSS':train_res[0], 'TRAIN_OACC':train_res[1],
-                'TRAIN_BACC':train_res[2], 'TRAIN_MACC':train_res[3],
-                'TRAIN_SACC':train_res[4], 'TRAIN_DACC':train_res[5],
-                'VALID_LOSS':valid_res[0], 'VALID_OACC':valid_res[1],
-                'VALID_BACC':valid_res[2], 'VALID_MACC':valid_res[3],
-                'VALID_SACC':valid_res[4], 'VALID_DACC':valid_res[5],
+                'TRAIN_LOSS':train_res[0], 'TRAIN_TACC':train_res[1],
+                'TRAIN_MACC':train_res[2], 'TRAIN_SACC':train_res[3],
+                
+                'VALID_LOSS':valid_res[0], 'VALID_TACC':valid_res[1],
+                'VALID_MACC':valid_res[2], 'VALID_SACC':valid_res[3],
             }
             return pd.DataFrame(log_row,index=[0])
         
@@ -322,10 +321,9 @@ def train(train_loader,model,optimizer,epoch,scheduler):
                 'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
                 'Elapsed {remain:s} '
                 'Loss: {loss.val:.3f}({loss.avg:.3f}) '
-                'BAcc: {t_acc.val:.3f}({t_acc.avg:.3f}) '
+                'TAcc: {t_acc.val:.3f}({t_acc.avg:.3f}) '
                 'MAcc: {m_acc.val:.4f}({m_acc.avg:.3f}) '
-                'SAcc: {s_acc.val:.3f}({s_acc.avg:.3f}) '
-                'DAcc: {d_acc.val:.3f}({d_acc.avg:.3f}) '                  
+                'SAcc: {s_acc.val:.3f}({s_acc.avg:.3f}) '                  
                 'Grad: {grad_norm:.4f}  '
                 'LR: {lr:.6f}  '
                 'sent/s {sent_s:.0f} '
@@ -405,11 +403,9 @@ def validate(valid_loader,model):
                 'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
                 'Elapsed {remain:s} '
                 'Loss: {loss.val:.4f}({loss.avg:.4f}) '
-                'OAcc: {o_acc.val:.3f}({o_acc.avg:.3f}) '
-                'BAcc: {t_acc.val:.3f}({t_acc.avg:.3f}) '
+                'TAcc: {t_acc.val:.3f}({t_acc.avg:.3f}) '
                 'MAcc: {m_acc.val:.4f}({m_acc.avg:.3f}) '
                 'SAcc: {s_acc.val:.3f}({s_acc.avg:.3f}) '
-                'DAcc: {d_acc.val:.3f}({d_acc.avg:.3f}) '
                 'sent/s {sent_s:.0f} '
                 .format(
                 step+1, len(valid_loader),

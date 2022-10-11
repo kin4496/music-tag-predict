@@ -3,7 +3,6 @@ os.environ['OMP_NUM_THREADS'] = '24'
 os.environ['NUMEXPR_MAX_THREADS'] = '24'
 import math
 import glob
-import json
 import torch
 import tag_dataset
 import tag_model
@@ -15,6 +14,9 @@ from torch.utils.data import DataLoader
 import warnings
 warnings.filterwarnings(action='ignore')
 import argparse
+
+# 전처리 전 데이터가 저장된 디렉토리
+RAW_DATA_DIR="../input/raw_data"
 
 # 전처리된 데이터가 저장된 디렉터리
 DB_DIR = '../input/processed'
@@ -30,7 +32,7 @@ SUBMISSION_DIR = '../submission'
 
 # 미리 정의된 설정 값
 class CFG:    
-    batch_size=1024 # 배치 사이즈
+    batch_size=256 # 배치 사이즈
     num_workers=4 # 워커의 개수
     print_freq=100 # 결과 출력 빈도    
     warmup_steps=100 # lr을 서서히 증가시킬 step 수        
@@ -39,15 +41,14 @@ class CFG:
     intermediate_size=256 # TRANSFORMER셀의 intermediate 크기
     nlayers=2 # BERT의 층수
     nheads=8 # BERT의 head 개수
-    seq_len=64 # 토큰의 최대 길이
-    n_t_cls = 57 + 1 # 주제 태그 개수
-    n_m_cls = 552 + 1 # 감정,분위기 태그 개수
-    n_s_cls = 3190 + 1 # 상황 태그 개수
+    seq_len=256 # 토큰의 최대 길이
+    n_t_cls = 5 # 주제 태그 개수
+    n_m_cls = 6 # 감정,분위기 태그 개수
+    n_s_cls = 3 # 상황 태그 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
-    img_feat_size = 2048 # 이미지 피처 벡터의 크기
-    type_vocab_size = 30 # 타입의 유니크 인덱스 개수
+    type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
     data_path = os.path.join(DB_DIR, 'data.json') # 전처리 돼 저장된 dev 데이터셋    
-    mel_spec_path = os.path.join(DB_DIR, 'data_mel_spec.')
+    mel_spec_path = os.path.join(DB_DIR, 'music/mel')
 
 def main():
     # 명령행에서 받을 키워드 인자를 설정합니다.
@@ -84,7 +85,7 @@ def main():
     
     # 전처리된 데이터를 읽어옵니다.
     print('loading ...')
-    dev_df = pd.read_csv(CFG.data_path, dtype={'tokens':str})     
+    dev_df = pd.read_json(CFG.data_path)     
     mel_spec_path = CFG.mel_spec_path
     
     vocab = [line.split('\t')[0] for line in open(os.path.join(VOCAB_DIR, 'spm.vocab'), encoding='utf-8').readlines()]
@@ -130,7 +131,7 @@ def main():
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('parameters: ', count_parameters(model_list[0]))    
     
-    # 모델의 입력에 적합한 형태의 샘플을 가져오는 CateDataset의 인스턴스를 만듦
+    # 모델의 입력에 적합한 형태의 샘플을 가져오는 TagDataset의 인스턴스를 만듦
     dev_db = tag_dataset.TagDataset(dev_df, mel_spec_path, token2id, CFG.seq_len, 
                                        CFG.type_vocab_size)
     
@@ -143,13 +144,27 @@ def main():
     # dev 데이터셋의 모든 노래에 대해 예측된 태그 인덱스를 반환
     pred_idx = inference(dev_loader, model_list)
     
-    # dev 데이터셋의 노래별 예측된 태그를 붙여서 제출 파일을 생성하여 저장
+    # dev 데이터셋의 노래별 예측된 태그를 붙이기
     tag_cols = ['topic', 'mood', 'situation'] 
     dev_df[tag_cols] = pred_idx
     os.makedirs(SUBMISSION_DIR, exist_ok=True)
-    submission_path = os.path.join(SUBMISSION_DIR, 'dev.tsv')
-    dev_df[tag_cols].to_csv(submission_path, sep='\t', header=False, index=False)
-            
+    
+    #숫자로 이루어진 태그를 알아보기 쉽도록 바꾸기
+    raw_train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
+    label2topic=raw_train_df['topic'].astype('category').cat.categories.to_list()
+    label2mood=raw_train_df['mood'].astype('category').cat.categories.to_list()
+    label2situation=raw_train_df['situation'].astype('category').cat.categories.to_list()
+    
+    dev_df['topic']=dev_df['topic'].map(lambda x: label2topic[x])
+    dev_df['mood']=dev_df['mood'].map(lambda x: label2mood[x])
+    dev_df['situation']=dev_df['situation'].map(lambda x:label2situation[x])
+    
+    #제출 파일을 생성하여 저장
+    song_cols=['title']
+    submission_path_json = os.path.join(SUBMISSION_DIR, 'data.json')
+    submission_path_excel = os.path.join(SUBMISSION_DIR, 'data.xlsx')
+    dev_df[song_cols+tag_cols].to_json(submission_path_json)
+    dev_df[song_cols+tag_cols].to_excel(submission_path_excel)        
     print('done')
 
 def inference(dev_loader, model_list):

@@ -90,9 +90,9 @@ class TagClassifier(nn.Module):
         # 전처리된 제목+가사를 하나의 텍스트 벡터(text_vec)로 변환
         # 반환 튜플(시퀀스 아웃풋,풀드(pooled) 아웃 풋) 중 시퀀스 아웃풋만 사용
         text_output = self.text_encoder(token_ids,token_mask,token_type_ids=token_types)[0]
-
+        
         # 시퀀스 중 첫 타임 스탭의 hidden_state만 사용.
-        text_vec=text_output[:,]
+        text_vec=text_output[:,0]
 
         # mel-spec을 cnn에 넣어 sound_vec로 변환
         sound_vec=self.sound_encoder(mel_spec)

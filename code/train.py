@@ -215,7 +215,7 @@ def main():
                 'VALID_LOSS':valid_res[0], 'VALID_TACC':valid_res[1],
                 'VALID_MACC':valid_res[2], 'VALID_SACC':valid_res[3],
             }
-            return pd.DataFrame(log_row,index=[0])
+            return pd.DataFrame(log_row,index=False)
         
         # 학습을 진행하고 loss나 acc와 같은 결과를 반환합니다.
         train_res = train(train_loader,model,optimizer,epoch,scheduler)
@@ -399,7 +399,7 @@ def validate(valid_loader,model):
             s_accuracies.update(s_acc, batch_size)
             
             print(
-                'TEST: {0}/{1}] '
+                'TEST: [{0}/{1}] '
                 'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
                 'Elapsed {remain:s} '
                 'Loss: {loss.val:.4f}({loss.avg:.4f}) '
@@ -429,9 +429,8 @@ def calc_cate_acc(pred, label):
     _, s_idx = s_pred.max(1)
         
     t_acc = (t_idx == label[:, 0]).sum().item() / (label[:, 0]>0).sum().item()
-    m_acc = (m_idx == label[:, 1]).sum().item() / (label[:, 1]>0).sum().item()
-            
-    s_acc = (s_idx == label[:, 2]).sum().item() / ((label[:, 2]>0).sum().item()+1e-06)
+    m_acc = (m_idx == label[:, 1]).sum().item() / (label[:, 1]>0).sum().item()        
+    s_acc = (s_idx == label[:, 2]).sum().item() / (label[:, 2]>0).sum().item()
         
     return t_acc, m_acc, s_acc
 

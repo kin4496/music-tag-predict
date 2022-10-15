@@ -42,9 +42,9 @@ class CFG:
     nlayers=2 # BERT의 층수
     nheads=8 # BERT의 head 개수
     seq_len=256 # 토큰의 최대 길이
-    n_t_cls = 5 # 주제 태그 개수
-    n_m_cls = 6 # 감정,분위기 태그 개수
-    n_s_cls = 3 # 상황 태그 개수
+    n_t_cls = 0 # 주제 태그 개수
+    n_m_cls = 0 # 감정,분위기 태그 개수
+    n_s_cls = 0 # 상황 태그 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
     type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
     data_path = os.path.join(DB_DIR, 'data.json') # 전처리 돼 저장된 dev 데이터셋    
@@ -73,11 +73,14 @@ def main():
     CFG.seq_len =  args.seq_len
     CFG.num_workers=args.nworkers
     CFG.res_dir=f'res_dir_{args.k}'
+    
     # 전처리되기 전 데이터 읽어와 분류해야할 수를 가져온다.
-    raw_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
-    CFG.n_t_cls=len(raw_df['topic'].astype('category').cat.categories)
-    CFG.n_m_cls=len(raw_df['mood'].astype('category').cat.categories)
-    CFG.n_s_cls=len(raw_df['situation'].astype('category').cat.categories)
+    raw_train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
+    CFG.n_t_cls=len(raw_train_df['topic'].astype('category').cat.categories)
+    CFG.n_m_cls=len(raw_train_df['mood'].astype('category').cat.categories)
+    CFG.n_s_cls=len(raw_train_df['situation'].astype('category').cat.categories)
+    
+    # CFG 출력
     print(CFG.__dict__)    
     
     # 랜덤 시드를 설정하여 매 코드를 실행할 때마다 동일한 결과를 얻게 함
@@ -155,7 +158,6 @@ def main():
     os.makedirs(SUBMISSION_DIR, exist_ok=True)
     
     #숫자로 이루어진 태그를 알아보기 쉽도록 바꾸기
-    raw_train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
     label2topic=raw_train_df['topic'].astype('category').cat.categories.to_list()
     label2mood=raw_train_df['mood'].astype('category').cat.categories.to_list()
     label2situation=raw_train_df['situation'].astype('category').cat.categories.to_list()

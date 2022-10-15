@@ -44,9 +44,9 @@ class CFG:
     nlayers=2 # BERT의 층수
     nheads=8 # BERT의 head 개수
     seq_len=256 # 토큰의 최대 길이
-    n_t_cls = 5 # 노래주제 개수 - 아직 정확히 안 정해짐
-    n_m_cls = 6 # 감정,분위기 개수 - 아직 정확히 안 정해짐
-    n_s_cls = 3 # 상황 개수 - 아직 정확히 안 정해짐
+    n_t_cls = 0 # 노래주제 개수
+    n_m_cls = 0 # 감정,분위기 개수
+    n_s_cls = 0 # 상황 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
     type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
     train_path = os.path.join(DB_PATH,'train.json')
@@ -83,7 +83,7 @@ def main():
     CFG.nlayers =  args.nlayers    
     CFG.nheads =  args.nheads
     CFG.hidden_size =  args.hidden_size    
-    print(CFG.__dict__)
+    
     
     # 전처리되기 전 데이터 읽어와 분류해야할 수를 가져온다.
     raw_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
@@ -91,6 +91,8 @@ def main():
     CFG.n_m_cls=len(raw_df['mood'].astype('category').cat.categories)
     CFG.n_s_cls=len(raw_df['situation'].astype('category').cat.categories)
     
+    # CFG 출력
+    print(CFG.__dict__)
 
     # 랜덤 시드를 설정하여 매 코드를 실행할 때마다 동일한 결과를 얻게 합니다.
     os.environ['PYTHONHASHSEED'] = str(CFG.seed)

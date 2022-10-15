@@ -73,6 +73,11 @@ def main():
     CFG.seq_len =  args.seq_len
     CFG.num_workers=args.nworkers
     CFG.res_dir=f'res_dir_{args.k}'
+    # 전처리되기 전 데이터 읽어와 분류해야할 수를 가져온다.
+    raw_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
+    CFG.n_t_cls=len(raw_df['topic'].astype('category').cat.categories)
+    CFG.n_m_cls=len(raw_df['mood'].astype('category').cat.categories)
+    CFG.n_s_cls=len(raw_df['situation'].astype('category').cat.categories)
     print(CFG.__dict__)    
     
     # 랜덤 시드를 설정하여 매 코드를 실행할 때마다 동일한 결과를 얻게 함

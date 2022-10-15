@@ -136,7 +136,7 @@ def main():
                                        CFG.type_vocab_size)
     
     # 여러 개의 워커로 빠르게 배치(미니배치)를 생성하도록 DataLoader로 
-    # CateDataset 인스턴스를 감싸 줌
+    # TagDataset 인스턴스를 감싸 줌
     dev_loader = DataLoader(
         dev_db, batch_size=CFG.batch_size, shuffle=False,
         num_workers=CFG.num_workers, pin_memory=True)    
@@ -190,7 +190,7 @@ def inference(dev_loader, model_list):
     pred_idx_list = []
     
     # dev_loader에서 반복해서 배치 데이터를 받음
-    # CateDataset의 __getitem__() 함수의 반환 값과 동일한 변수 반환
+    # TagDataset의 __getitem__() 함수의 반환 값과 동일한 변수 반환
     for step, (token_ids, token_mask, token_types, img_feat, _) in enumerate(dev_loader):
         # 데이터 로딩 시간 기록
         data_time.update(time.time() - end)

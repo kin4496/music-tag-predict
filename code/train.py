@@ -270,7 +270,7 @@ def train(train_loader,model,optimizer,epoch,scheduler):
 
     start = end = time.time()
     # train_loader에서 반복해서 학습용 배치 데이터를 받아옵니다.
-    # CateDataset의 __getitem__() 함수의 반환 값과 동일한 변수 반환
+    # TagDataset의 __getitem__() 함수의 반환 값과 동일한 변수 반환
     for step, (token_ids, token_mask, token_types, img_feat, label) in enumerate(train_loader):
         # 데이터 로딩 시간 기록
         data_time.update(time.time() - end)
@@ -284,7 +284,7 @@ def train(train_loader,model,optimizer,epoch,scheduler):
                 
         # model은 배치 데이터를 입력 받아서 예측 결과 및 loss 반환
         # model은 인스턴스이나 __call__함수가 추가돼 함수처럼 호출이 가능합니다. 
-        # CateClassifier의 __call__ 함수 내에서 forward 함수가 호출됩니다. 
+        # TagClassifier의 __call__ 함수 내에서 forward 함수가 호출됩니다. 
         loss, pred = model(token_ids, token_mask, token_types, img_feat, label)
         loss = loss.mean() # Multi-GPU 학습의 경우 mean() 호출 필요
                 
@@ -310,7 +310,7 @@ def train(train_loader,model,optimizer,epoch,scheduler):
         # CFG.print_freq 주기대로 결과 로그를 출력
         if step % CFG.print_freq == 0 or step == (len(train_loader)-1):
             # 주제/감정,분위기/상황이 예측된 pred와 정답 label로 정확도 계산 및 집계
-            t_acc, m_acc, s_acc = calc_cate_acc(pred, label)
+            t_acc, m_acc, s_acc = calc_tag_acc(pred, label)
             t_accuracies.update(t_acc, batch_size)
             m_accuracies.update(m_acc, batch_size)
             s_accuracies.update(s_acc, batch_size)
@@ -392,7 +392,7 @@ def validate(valid_loader,model):
 
         # CFG.print_freq 주기대로 결과 로그를 출력
         if step % CFG.print_freq == 0 or step == (len(valid_loader)-1):
-            t_acc, m_acc, s_acc = calc_cate_acc(pred, label)
+            t_acc, m_acc, s_acc = calc_tag_acc(pred, label)
 
             t_accuracies.update(t_acc, batch_size)
             m_accuracies.update(m_acc, batch_size)
@@ -419,7 +419,7 @@ def validate(valid_loader,model):
     return (losses.avg, t_accuracies.avg, m_accuracies.avg, 
             s_accuracies.avg)
 
-def calc_cate_acc(pred, label):
+def calc_tag_acc(pred, label):
     """
     주제/감정,분위기/상황 태그별 정확도와 전체(overall) 정확도를 반환
     """

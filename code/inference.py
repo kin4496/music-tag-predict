@@ -53,7 +53,8 @@ class CFG:
 def main():
     # 명령행에서 받을 키워드 인자를 설정합니다.
     parser = argparse.ArgumentParser("")
-    parser.add_argument("--model_dir", type=str, default=MODEL_DIR)    
+    parser.add_argument("--model_dir", type=str, default=MODEL_DIR)
+    parser.add_argument("--data_dir", type=str, default=CFG.data_path)     
     parser.add_argument("--batch_size", type=int, default=CFG.batch_size)   
     parser.add_argument("--seq_len", type=int, default=CFG.seq_len)
     parser.add_argument("--nworkers", type=int, default=CFG.num_workers)
@@ -65,6 +66,7 @@ def main():
     args = parser.parse_args()
     print(args) 
     
+    CFG.data_path=args.data_dir
     CFG.batch_size=args.batch_size    
     CFG.seed =  args.seed        
     CFG.nlayers =  args.nlayers    
@@ -167,7 +169,7 @@ def main():
     dev_df['situation']=dev_df['situation'].map(lambda x:label2situation[x])
     
     #제출 파일을 생성하여 저장
-    song_cols=['title']
+    song_cols=['title','artist']
     submission_path_json = os.path.join(SUBMISSION_DIR, 'data.json')
     submission_path_excel = os.path.join(SUBMISSION_DIR, 'data.xlsx')
     dev_df[song_cols+tag_cols].to_json(submission_path_json)

@@ -47,7 +47,7 @@ class CFG:
     n_s_cls = 0 # 상황 태그 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
     type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
-    data_path = os.path.join(DB_DIR, 'data.json') # 전처리 돼 저장된 dev 데이터셋    
+    data_path = os.path.join(DB_DIR, 'test.json') # 전처리 돼 저장된 dev 데이터셋    
     mel_spec_path = os.path.join(DB_DIR, 'music/mel')
 
 def main():
@@ -170,8 +170,8 @@ def main():
     
     #제출 파일을 생성하여 저장
     song_cols=['title','artist']
-    submission_path_json = os.path.join(SUBMISSION_DIR, 'data.json')
-    submission_path_excel = os.path.join(SUBMISSION_DIR, 'data.xlsx')
+    submission_path_json = os.path.join(SUBMISSION_DIR, 'test.json')
+    submission_path_excel = os.path.join(SUBMISSION_DIR, 'test.xlsx')
     dev_df[song_cols+tag_cols].to_json(submission_path_json)
     dev_df[song_cols+tag_cols].to_excel(submission_path_excel)        
     print('done')

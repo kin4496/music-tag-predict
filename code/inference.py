@@ -15,6 +15,14 @@ import warnings
 warnings.filterwarnings(action='ignore')
 import argparse
 
+# gpu 옵션 설정하기
+if torch.cuda.is_available():
+    device=torch.device('cuda')
+elif torch.backends.mps.is_available():
+    device=torch.device('mps')
+else:
+    device=torch.device('cpu')
+
 # 전처리 전 데이터가 저장된 디렉토리
 RAW_DATA_DIR="../input/raw_data"
 
@@ -47,7 +55,7 @@ class CFG:
     n_s_cls = 0 # 상황 태그 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
     type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
-    data_path = os.path.join(DB_DIR, 'test.json') # 전처리 돼 저장된 dev 데이터셋    
+    data_path = os.path.join(DB_DIR, 'data.json') # 전처리 돼 저장된 dev 데이터셋    
     mel_spec_path = os.path.join(DB_DIR, 'music/mel')
 
 def main():
@@ -89,8 +97,9 @@ def main():
     os.environ['PYTHONHASHSEED'] = str(CFG.seed)
     random.seed(CFG.seed)
     np.random.seed(CFG.seed)
-    torch.manual_seed(CFG.seed)    
-    torch.cuda.manual_seed(CFG.seed)
+    torch.manual_seed(CFG.seed)
+    if torch.cuda.is_available():    
+        torch.cuda.manual_seed(CFG.seed)
     torch.backends.cudnn.deterministic = True
     
     # 전처리된 데이터를 읽어옵니다.
@@ -111,19 +120,23 @@ def main():
         model = tag_model.TagClassifier(CFG)
         if model_path != "":
             print("=> loading checkpoint '{}'".format(model_path))
-            checkpoint = torch.load(model_path)        
+
+            if torch.cuda.is_available():
+                checkpoint = torch.load(model_path)
+            else:
+                checkpoint = torch.load(model_path,map_location=torch.device('cpu'))        
             state_dict = checkpoint['state_dict']                
             model.load_state_dict(state_dict, strict=True)  
             print("=> loaded checkpoint '{}' (epoch {})"
                   .format(model_path, checkpoint['epoch']))
         
-        # 쿠다 사용가능한지 확인
-        if not torch.cuda.is_available():
+        # GPU 사용가능한지 확인
+        if not torch.cuda.is_available() and not torch.backends.mps.is_available():
             print('Gpu 사용할 수 없습니다.')
             exit()
         
         # 모델의 파라미터를 GPU 메모리로 옮김
-        model.cuda()
+        model.to(device)
 
         # GPU가 2개 이상이면 데이터 패럴렐로
         n_gpu = torch.cuda.device_count()
@@ -206,7 +219,7 @@ def inference(dev_loader, model_list):
         
         # 배치 데이터의 위치를 CPU메모리에서 GPU메모리로 이동
         token_ids, token_mask, token_types, img_feat = (
-            token_ids.cuda(), token_mask.cuda(), token_types.cuda(), img_feat.cuda())
+            token_ids.to(device), token_mask.to(device), token_types.to(device), img_feat.to(device))
         
         batch_size = token_ids.size(0)
         

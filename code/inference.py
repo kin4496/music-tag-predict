@@ -74,7 +74,7 @@ def main():
     args = parser.parse_args()
     print(args) 
     
-    CFG.data_path=args.data_dir
+    CFG.data_path=os.path.join(DB_DIR,args.data_dir)
     CFG.batch_size=args.batch_size    
     CFG.seed =  args.seed        
     CFG.nlayers =  args.nlayers    

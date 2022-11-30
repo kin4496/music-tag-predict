@@ -69,8 +69,7 @@ def main():
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--nlayers", type=int, default=CFG.nlayers)
     parser.add_argument("--nheads", type=int, default=CFG.nheads)
-    parser.add_argument("--hidden_size", type=int, default=CFG.hidden_size)    
-    parser.add_argument("--k", type=int, default=0)    
+    parser.add_argument("--hidden_size", type=int, default=CFG.hidden_size)        
     args = parser.parse_args()
     print(args) 
     
@@ -82,7 +81,6 @@ def main():
     CFG.hidden_size =  args.hidden_size
     CFG.seq_len =  args.seq_len
     CFG.num_workers=args.nworkers
-    CFG.res_dir=f'res_dir_{args.k}'
     
     # 전처리되기 전 데이터 읽어와 분류해야할 수를 가져온다.
     raw_train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))

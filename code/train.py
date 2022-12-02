@@ -45,10 +45,11 @@ class CFG:
     nheads=8 # BERT의 head 개수
     seq_len=256 # 토큰의 최대 길이
     n_t_cls = 0 # 노래주제 개수
-    n_m_cls = 0 # 감정,분위기 개수
+    n_m_cls = 0 # 분위기 개수
+    n_e_cls = 0 # 감정 개수
     n_s_cls = 0 # 상황 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
-    type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
+    type_vocab_size = 2 # 타입의 유니크 인덱스 개수
     train_path = os.path.join(DB_PATH,'train.json')
     mel_spec_path = os.path.join(DB_PATH,'music/mel')
 
@@ -89,6 +90,7 @@ def main():
     raw_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
     CFG.n_t_cls=len(raw_df['topic'].astype('category').cat.categories)
     CFG.n_m_cls=len(raw_df['mood'].astype('category').cat.categories)
+    CFG.n_e_cls=len(raw_df['emotion'].astype('category').cat.categories)
     CFG.n_s_cls=len(raw_df['situation'].astype('category').cat.categories)
     
     # CFG 출력
@@ -212,10 +214,12 @@ def main():
             log_row={
                 'EPOCH':epoch,'LR':lr,
                 'TRAIN_LOSS':train_res[0], 'TRAIN_TACC':train_res[1],
-                'TRAIN_MACC':train_res[2], 'TRAIN_SACC':train_res[3],
-                
+                'TRAIN_MACC':train_res[2], 'TRAIN_EACC':train_res[3],
+                'TRAIN_SACC':train_res[4],
+
                 'VALID_LOSS':valid_res[0], 'VALID_TACC':valid_res[1],
-                'VALID_MACC':valid_res[2], 'VALID_SACC':valid_res[3],
+                'VALID_MACC':valid_res[2], 'VALID_EACC':valid_res[3],
+                'VALID_SACC':valid_res[4],
             }
             return pd.DataFrame(log_row,index=[0])
         
@@ -262,7 +266,8 @@ def train(train_loader,model,optimizer,epoch,scheduler):
     data_time = AverageMeter()      # 데이터 로딩 시간 집계
     losses = AverageMeter()         # 손실 값 집계
     t_accuracies = AverageMeter()   # 주제 정확도 집계
-    m_accuracies = AverageMeter()   # 감정,분위기 정확도 집계
+    m_accuracies = AverageMeter()   # 분위기 정확도 집계
+    e_accuracies = AverageMeter()   # 감정 정확도 집계
     s_accuracies = AverageMeter()   # 상황 정확도 집계
 
     sent_count = AverageMeter()     # 문장 처리 개수 집계
@@ -311,10 +316,11 @@ def train(train_loader,model,optimizer,epoch,scheduler):
 
         # CFG.print_freq 주기대로 결과 로그를 출력
         if step % CFG.print_freq == 0 or step == (len(train_loader)-1):
-            # 주제/감정,분위기/상황이 예측된 pred와 정답 label로 정확도 계산 및 집계
-            t_acc, m_acc, s_acc = calc_tag_acc(pred, label)
+            # 주제/분위기/감정/상황이 예측된 pred와 정답 label로 정확도 계산 및 집계
+            t_acc, m_acc, e_acc, s_acc = calc_tag_acc(pred, label)
             t_accuracies.update(t_acc, batch_size)
             m_accuracies.update(m_acc, batch_size)
+            e_accuracies.update(e_acc, batch_size)
             s_accuracies.update(s_acc, batch_size)
         
             
@@ -325,6 +331,7 @@ def train(train_loader,model,optimizer,epoch,scheduler):
                 'Loss: {loss.val:.3f}({loss.avg:.3f}) '
                 'TAcc: {t_acc.val:.3f}({t_acc.avg:.3f}) '
                 'MAcc: {m_acc.val:.4f}({m_acc.avg:.3f}) '
+                'EAcc: {e_acc.val:.4f}({e_acc.avg:.3f}) '
                 'SAcc: {s_acc.val:.3f}({s_acc.avg:.3f}) '                  
                 'Grad: {grad_norm:.4f}  '
                 'LR: {lr:.6f}  '
@@ -333,7 +340,7 @@ def train(train_loader,model,optimizer,epoch,scheduler):
                 epoch, step+1, len(train_loader),
                 data_time=data_time, loss=losses,
                 t_acc=t_accuracies, m_acc=m_accuracies,
-                s_acc=s_accuracies, 
+                e_acc=e_accuracies,s_acc=s_accuracies, 
                 remain=timeSince(start, float(step+1)/len(train_loader)),
                 grad_norm=grad_norm,
                 lr=scheduler.get_lr()[0],                   
@@ -342,7 +349,7 @@ def train(train_loader,model,optimizer,epoch,scheduler):
             )
     # 학습 동안 집계된 결과 반환
     return (losses.avg, t_accuracies.avg, m_accuracies.avg, 
-            s_accuracies.avg)
+            e_accuracies.avg,s_accuracies.avg)
 
 def validate(valid_loader,model):
     """    
@@ -355,7 +362,8 @@ def validate(valid_loader,model):
     data_time = AverageMeter()      # 데이터 로딩 시간 집계
     losses = AverageMeter()         # 손실 값 집계
     t_accuracies = AverageMeter()   # 주제 정확도 집계
-    m_accuracies = AverageMeter()   # 감정,분위기 정확도 집계
+    m_accuracies = AverageMeter()   # 분위기 정확도 집계
+    e_accuracies = AverageMeter()   # 감정 정확도 집계
     s_accuracies = AverageMeter()   # 상황 정확도 집계
     
     sent_count = AverageMeter()     # 문장 처리 개수 집계
@@ -394,10 +402,11 @@ def validate(valid_loader,model):
 
         # CFG.print_freq 주기대로 결과 로그를 출력
         if step % CFG.print_freq == 0 or step == (len(valid_loader)-1):
-            t_acc, m_acc, s_acc = calc_tag_acc(pred, label)
+            t_acc, m_acc, e_acc, s_acc = calc_tag_acc(pred, label)
 
             t_accuracies.update(t_acc, batch_size)
             m_accuracies.update(m_acc, batch_size)
+            e_accuracies.update(e_acc, batch_size)
             s_accuracies.update(s_acc, batch_size)
             
             print(
@@ -407,34 +416,37 @@ def validate(valid_loader,model):
                 'Loss: {loss.val:.4f}({loss.avg:.4f}) '
                 'TAcc: {t_acc.val:.3f}({t_acc.avg:.3f}) '
                 'MAcc: {m_acc.val:.4f}({m_acc.avg:.3f}) '
+                'EAcc: {e_acc.val:.4f}({e_acc.avg:.3f}) '
                 'SAcc: {s_acc.val:.3f}({s_acc.avg:.3f}) '
                 'sent/s {sent_s:.0f} '
                 .format(
                 step+1, len(valid_loader),
                 data_time=data_time, loss=losses,
                 t_acc=t_accuracies, m_acc=m_accuracies,
-                s_acc=s_accuracies,
+                e_acc=e_accuracies,s_acc=s_accuracies,
                 remain=timeSince(start, float(step+1)/len(valid_loader)),
                 sent_s=sent_count.avg/batch_time.avg
                 ))
     # 검증 동안 집계된 결과 반환
     return (losses.avg, t_accuracies.avg, m_accuracies.avg, 
-            s_accuracies.avg)
+            e_accuracies.avg,s_accuracies.avg)
 
 def calc_tag_acc(pred, label):
     """
-    주제/감정,분위기/상황 태그별 정확도와 전체(overall) 정확도를 반환
+    주제/분위기/감정/상황 태그별 정확도와 전체(overall) 정확도를 반환
     """
-    t_pred, m_pred, s_pred = pred    
+    t_pred, m_pred, e_pred, s_pred = pred    
     _, t_idx = t_pred.max(1)
     _, m_idx = m_pred.max(1)
+    _, e_idx = e_pred.max(1)
     _, s_idx = s_pred.max(1)
         
     t_acc = (t_idx == label[:, 0]).sum().item() / (label[:, 0]>=0).sum().item()
-    m_acc = (m_idx == label[:, 1]).sum().item() / (label[:, 1]>=0).sum().item()        
-    s_acc = (s_idx == label[:, 2]).sum().item() / (label[:, 2]>=0).sum().item()
+    m_acc = (m_idx == label[:, 1]).sum().item() / (label[:, 1]>=0).sum().item()
+    e_acc = (e_idx == label[:, 2]).sum().item() / (label[:, 2]>=0).sum().item()        
+    s_acc = (s_idx == label[:, 3]).sum().item() / (label[:, 3]>=0).sum().item()
         
-    return t_acc, m_acc, s_acc
+    return t_acc, m_acc, e_acc, s_acc
 
 def save_checkpoint(state,model_path,model_filename,is_best=False):
     print('saving current state model ...')

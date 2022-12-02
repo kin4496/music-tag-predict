@@ -80,7 +80,7 @@ def preprocess():
     dev_df=get_dataframe(DEV_FILE)
     
     #dev_df에 topic,mood,situation column 추가하기
-    labels=['topic','mood','situation']
+    labels=['topic','mood','emotion','situation']
     size=dev_df['title'].count()
     tempArr=[-1 for i in range(0,size)]
     for label in labels:
@@ -111,6 +111,7 @@ def preprocess():
             logger.info(os.path.join(dirname, filename))
 
     logger.info('tokenizing title + lyric ...')
+    
     # 센텐스피스 모델을 로드한다.
     sp = spm.SentencePieceProcessor()
     sp.Load(os.path.join(VOCAB_DIR, 'spm.model'))
@@ -119,13 +120,14 @@ def preprocess():
     train_df['tokens'] = train_df['text'].map(lambda x: " ".join(sp.EncodeAsPieces(x)) )
     dev_df['tokens'] = dev_df['text'].map(lambda x: " ".join(sp.EncodeAsPieces(x)) )
     
-    #topic, mood, situation 컬럼의 값을 0,1,2,3... 같은 숫자로 바꾼다.
+    #topic, mood, emotion, situation 컬럼의 값을 0,1,2,3... 같은 숫자로 바꾼다.
     train_df['topic']=train_df['topic'].astype('category').cat.codes
     train_df['mood']=train_df['mood'].astype('category').cat.codes
+    train_df['emotion']=train_df['emotion'].astype('category').cat.codes
     train_df['situation']=train_df['situation'].astype('category').cat.codes
     
     #필요한 컬럼만 남기고 삭제
-    columns = ['tokens','title',  'artist', 'topic', 'mood', 'situation']
+    columns = ['tokens','title',  'artist', 'topic', 'mood', 'emotion', 'situation']
     train_df=train_df[columns]
     
     #json 형태로 저장

@@ -51,10 +51,11 @@ class CFG:
     nheads=8 # BERT의 head 개수
     seq_len=256 # 토큰의 최대 길이
     n_t_cls = 0 # 주제 태그 개수
-    n_m_cls = 0 # 감정,분위기 태그 개수
+    n_m_cls = 0 # 분위기 태그 개수
+    n_e_cls = 0 # 감정 태그 개수
     n_s_cls = 0 # 상황 태그 개수
     vocab_size = 32000 # 토큰의 유니크 인덱스 개수
-    type_vocab_size = 1000 # 타입의 유니크 인덱스 개수
+    type_vocab_size = 2 # 타입의 유니크 인덱스 개수
     data_path = os.path.join(DB_DIR, 'data.json') # 전처리 돼 저장된 dev 데이터셋    
     mel_spec_path = os.path.join(DB_DIR, 'music/mel')
 
@@ -206,7 +207,7 @@ def inference(dev_loader, model_list):
 
     start = end = time.time()
     
-    # 배치별 예측한 주제/감정,분위기/상황의 인덱스를 리스트로 가짐
+    # 배치별 예측한 주제/분위기/감정/상황의 인덱스를 리스트로 가짐
     pred_idx_list = []
     
     # dev_loader에서 반복해서 배치 데이터를 받음
@@ -260,33 +261,36 @@ def inference(dev_loader, model_list):
 
 # 예측치의 각 카테고리 별로 가장 큰 값을 가지는 인덱스를 반환함
 def get_pred_idx(pred):
-    t_pred, m_pred, s_pred = pred # 주제/감정,분위기/상황 예측치로 분리
+    t_pred, m_pred, e_pred,s_pred = pred # 주제/분위기/감정/상황 예측치로 분리
     _, t_idx = t_pred.max(1) # 주제 중 가장 큰 값을 가지는 인덱스를 변수에 할당
-    _, m_idx = m_pred.max(1) # 감정,분위기 중 가장 큰 값을 가지는 인덱스를 변수에 할당
+    _, m_idx = m_pred.max(1) # 분위기 중 가장 큰 값을 가지는 인덱스를 변수에 할당
+    _, e_idx = e_pred.max(1) # 감정 중 가장 큰 값을 가지는 인덱스를 변수에 할당
     _, s_idx = s_pred.max(1) # 상황 중 가장 큰 값을 가지는 인덱스를 변수에 할당
     
-    # 주제/감정,분위기/상황 인덱스 반환
-    pred_idx = torch.stack([t_idx, m_idx, s_idx], 1)    
+    # 주제/감정/분위기/상황 인덱스 반환
+    pred_idx = torch.stack([t_idx, m_idx, e_idx, s_idx], 1)    
     return pred_idx
 
 
-# 예측된 주제/감정,분위기/상황 결과들을 앙상블함
+# 예측된 주제/분위기/감정/상황 결과들을 앙상블함
 # 앙상블 방법으로 간단히 산술 평균을 사용
 def ensemble(pred_list):
-    t_pred, m_pred, s_pred = 0, 0, 0    
+    t_pred, m_pred, e_pred, s_pred = 0, 0, 0, 0    
     for pred in pred_list:
-        # softmax를 적용해 주제/감정,분위기/상황 각 태그별 모든 클래스의 합이 1이 되도록 정규화
+        # softmax를 적용해 주제/분위기/감정/상황 각 태그별 모든 클래스의 합이 1이 되도록 정규화
         
         t_pred += torch.softmax(pred[0], 1)
         m_pred += torch.softmax(pred[1], 1)
-        s_pred += torch.softmax(pred[2], 1)
+        e_pred += torch.softmax(pred[2], 1)
+        s_pred += torch.softmax(pred[3], 1)
 
     t_pred /= len(pred_list)    # 모델별 '주제의 정규화된 예측값'들의 평균 계산
-    m_pred /= len(pred_list)   # 모델별 '감정,분위기의 정규화된 예측값'들의 평균 계산
+    m_pred /= len(pred_list)   # 모델별 '분위기의 정규화된 예측값'들의 평균 계산
+    e_pred /= len(pred_list)    # 모델별 '감정의 정규화된 예측값'들의 평균 계산
     s_pred /= len(pred_list)    # 모델별 '상황의 정규화된 예측값'들의 평균 계산 
     
     # 앙상블 결과 반환 
-    pred = [t_pred, m_pred, s_pred]    
+    pred = [t_pred, m_pred, e_pred, s_pred]    
     return pred
 
 

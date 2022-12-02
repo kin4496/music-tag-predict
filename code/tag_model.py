@@ -71,8 +71,11 @@ class TagClassifier(nn.Module):
         # 노래 주제 분류기
         self.topic_clsfier=get_clsfier(cfg.n_t_cls)
 
-        # 노래 감정,분위기 분류기
+        # 노래 분위기 분류기
         self.mood_clsfier=get_clsfier(cfg.n_m_cls)
+
+        # 노래 감정 분류기
+        self.emotion_clsfier=get_clsfier(cfg.n_e_cls)
 
         # 노래 상황 분류기(ex: 공부할때 듣는 노래,운동할때 듣는 노래,여행할때 듣는 노래)
         self.sit_clsfier=get_clsfier(cfg.n_s_cls)
@@ -103,8 +106,11 @@ class TagClassifier(nn.Module):
         # 결합된 벡터로 주제 예측
         t_pred = self.topic_clsfier(comb_vec)
 
-        # 결합된 벡터로 감정,분위기 예측
+        # 결합된 벡터로 분위기 예측
         m_pred = self.mood_clsfier(comb_vec)
+
+        # 결합된 벡터로 감정 예측
+        e_pred = self.env_clsfier(comb_vec)
 
         # 결합된 벡터로 상황 예측
         s_pred = self.sit_clsfier(comb_vec)
@@ -118,24 +124,27 @@ class TagClassifier(nn.Module):
             loss_func = nn.CrossEntropyLoss(ignore_index=-1)
             
             # label은 batch_size x 3을 (batch_size x 1) 3개로 만듦
-            t_label, m_label, s_label = label.split(1, 1)
+            t_label, m_label, e_label, s_label = label.split(1, 1)
             
             # 노래 주제를 예측한 값과 정답 값의 차이를 손실로 변환
             t_loss = loss_func(t_pred,t_label.view(-1))
 
-            # 노래 감정,분위기를 예측한 값과 정답 값의 차이를 손실로 변환
+            # 노래 분위기를 예측한 값과 정답 값의 차이를 손실로 변환
             m_loss = loss_func(m_pred,m_label.view(-1))
+
+            # 노래의 감정을 예측한 값과 정답 값의 차이를 손실로 변환
+            e_loss = loss_func(e_pred,e_label.view(-1))
 
             # 노래 듣는 상황을 예측한 값과 정답 값의 차이를 손실로 변환
             s_loss = loss_func(s_pred,s_label.view(-1))
 
-            loss = t_loss + m_loss + s_loss
+            loss = t_loss + m_loss + e_loss + s_loss
         
         else: # label이 없으면 loss로 0을 반환
             loss = t_pred.new(1).fill_(0)
         
         # 최종 계산된 손실과 예측된 주제/감정,분위기/상황을 반환
-        return loss,[t_pred,m_pred,s_pred]
+        return loss,[t_pred,m_pred,e_pred,s_pred]
 
  
 

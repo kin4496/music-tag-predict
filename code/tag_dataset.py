@@ -28,7 +28,7 @@ class TagDataset(Dataset):
         self.tokens = df_data['tokens'].values
         self.mel_spec_path = mel_spec_path
         self.tokens_max_len=tokens_max_len
-        self.labels=df_data[['topic','mood','situation']].values
+        self.labels=df_data[['topic','mood','emotion','situation']].values
         self.token2id=token2id
         self.p=re.compile('▁[^▁]+') # ▁기호를 기준으로 나누기 위한 컴파일된 정규식
         self.type_vocab_size = type_vocab_size
@@ -86,7 +86,7 @@ class TagDataset(Dataset):
         if sound_feat==None:
             sound_feat=torch.zeros((3,200,200))
 
-        # 주제/감정,분위기/상황 라벨 준비
+        # 주제/분위기/감정/상황 라벨 준비
         label = self.labels[idx]
         label = torch.LongTensor(label)
 

@@ -54,6 +54,7 @@ class TagClassifier(nn.Module):
             
             nn.Flatten(),
             nn.Linear(in_features=64*5*5,out_features=1024),
+            nn.BatchNorm1d(1024),
             nn.ReLU(),
             nn.Linear(1024,cfg.hidden_size)
         )
@@ -110,7 +111,7 @@ class TagClassifier(nn.Module):
         m_pred = self.mood_clsfier(comb_vec)
 
         # 결합된 벡터로 감정 예측
-        e_pred = self.env_clsfier(comb_vec)
+        e_pred = self.emotion_clsfier(comb_vec)
 
         # 결합된 벡터로 상황 예측
         s_pred = self.sit_clsfier(comb_vec)

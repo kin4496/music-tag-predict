@@ -63,7 +63,7 @@ def main():
     # 명령행에서 받을 키워드 인자를 설정합니다.
     parser = argparse.ArgumentParser("")
     parser.add_argument("--model_dir", type=str, default=MODEL_DIR)
-    parser.add_argument("--data_dir", type=str, default=CFG.data_path)     
+    parser.add_argument("--data_dir", type=str, default='data.json')     
     parser.add_argument("--batch_size", type=int, default=CFG.batch_size)   
     parser.add_argument("--seq_len", type=int, default=CFG.seq_len)
     parser.add_argument("--nworkers", type=int, default=CFG.num_workers)
@@ -87,6 +87,7 @@ def main():
     raw_train_df=pd.read_json(os.path.join(RAW_DATA_DIR,'train.json'))
     CFG.n_t_cls=len(raw_train_df['topic'].astype('category').cat.categories)
     CFG.n_m_cls=len(raw_train_df['mood'].astype('category').cat.categories)
+    CFG.n_e_cls=len(raw_train_df['emotion'].astype('category').cat.categories)
     CFG.n_s_cls=len(raw_train_df['situation'].astype('category').cat.categories)
     
     # CFG 출력
@@ -167,17 +168,19 @@ def main():
     pred_idx = inference(dev_loader, model_list)
     
     # dev 데이터셋의 노래별 예측된 태그를 붙이기
-    tag_cols = ['topic', 'mood', 'situation'] 
+    tag_cols = ['topic', 'mood', 'emotion', 'situation'] 
     dev_df[tag_cols] = pred_idx
     os.makedirs(SUBMISSION_DIR, exist_ok=True)
     
     #숫자로 이루어진 태그를 알아보기 쉽도록 바꾸기
     label2topic=raw_train_df['topic'].astype('category').cat.categories.to_list()
     label2mood=raw_train_df['mood'].astype('category').cat.categories.to_list()
+    label2emotion=raw_train_df['emotion'].astype('category').cat.categories.to_list()
     label2situation=raw_train_df['situation'].astype('category').cat.categories.to_list()
     
     dev_df['topic']=dev_df['topic'].map(lambda x: label2topic[x])
     dev_df['mood']=dev_df['mood'].map(lambda x: label2mood[x])
+    dev_df['emotion']=dev_df['emotion'].map(lambda x: label2emotion[x])
     dev_df['situation']=dev_df['situation'].map(lambda x:label2situation[x])
     
     #제출 파일을 생성하여 저장
